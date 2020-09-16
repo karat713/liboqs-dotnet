@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
 namespace OpenQuantumSafe
@@ -29,28 +28,28 @@ namespace OpenQuantumSafe
         }
 
         #region OQS native DLL functions
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static IntPtr OQS_SIG_new(string method_name);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static int OQS_SIG_keypair(IntPtr sig, byte[] public_key, byte[] secret_key);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static int OQS_SIG_sign(IntPtr sig, byte[] signature, ref UIntPtr sig_len, byte[] message, int message_len, byte[] secret_key);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static int OQS_SIG_verify(IntPtr sig, byte[] message, int message_len, byte[] signature, int signature_len, byte[] public_key);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static void OQS_SIG_free(IntPtr sig);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static IntPtr OQS_SIG_alg_identifier(int index);
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static int OQS_SIG_alg_count();
 
-        [DllImport("oqs.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("oqs", CallingConvention = CallingConvention.Cdecl)]
         extern private static int OQS_SIG_alg_is_enabled(string method_name);
         #endregion
 
@@ -58,12 +57,12 @@ namespace OpenQuantumSafe
         /// List of supported mechanisms. Some mechanisms might have been disabled at runtime,
         /// see <see cref="EnableddMechanisms"/> for the list of enabled mechanisms.
         /// </summary>
-        public static ImmutableList<string> SupportedMechanisms { get; private set; }
+        public static List<string> SupportedMechanisms { get; private set; }
 
         /// <summary>
         /// List of enabled mechanisms.
         /// </summary>
-        public static ImmutableList<string> EnabledMechanisms { get; protected set; }
+        public static List<string> EnabledMechanisms { get; protected set; }
 
         /// <summary>
         /// Static constructor.
@@ -71,21 +70,20 @@ namespace OpenQuantumSafe
         static Sig()
         {
             // initialize list of supported/enabled mechanisms
-            List<string> enabled = new List<string>();
-            List<string> supported = new List<string>();
+            EnabledMechanisms = new List<string>();
+            SupportedMechanisms = new List<string>();
+
             int count = OQS_SIG_alg_count();
             for (int i = 0; i < count; i++)
             {
                 string alg = Marshal.PtrToStringAnsi(OQS_SIG_alg_identifier(i));
-                supported.Add(alg);
+                SupportedMechanisms.Add(alg);
                 // determine if the alg is enabled
                 if (OQS_SIG_alg_is_enabled(alg) == 1)
                 {
-                    enabled.Add(alg);
+                    EnabledMechanisms.Add(alg);
                 }
             }
-            EnabledMechanisms = enabled.ToImmutableList<string>();
-            SupportedMechanisms = supported.ToImmutableList<string>();
         }
 
         /// <summary>
@@ -110,6 +108,7 @@ namespace OpenQuantumSafe
             {
                 throw new MechanismNotEnabledException(sigAlg);
             }
+
             oqs_ptr = OQS_SIG_new(sigAlg);
             if (oqs_ptr == IntPtr.Zero)
             {
